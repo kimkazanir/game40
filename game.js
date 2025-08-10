@@ -1,17 +1,44 @@
-// ... (Önceki kodlar aynı kalacak) ...
+const config = {
+    type: Phaser.AUTO,
+    width: 1200,
+    height: 800,
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
 
-// Global oyun objeleri
-let deckSprite;
-let discardPileSprite;
+const game = new Phaser.Game(config);
+
+// Sunucuya bağlanmak için URL (tek servis olduğu için ana URL)
+const socket = io('https://game40.onrender.com');
+
+// Oyun verileri
 let playerHand = [];
+let deckCountText;
+let discardPileSprite;
+
+function preload() {
+    this.load.image('card_back', 'https://raw.githubusercontent.com/yolafro/phaser-deck/main/assets/images/card_back.png');
+    this.load.atlas('cards', 'https://raw.githubusercontent.com/yolafro/phaser-deck/main/assets/images/cards.png', 'https://raw.githubusercontent.com/yolafro/phaser-deck/main/assets/images/cards.json');
+}
 
 function create() {
     this.cameras.main.setBackgroundColor('#283618');
     this.add.text(600, 50, 'Online Rummy', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
 
     // Deste ve atma destesi görsellerini ekle
-    deckSprite = this.add.image(450, 400, 'card_back').setScale(0.7).setInteractive();
-    discardPileSprite = this.add.image(750, 400, 'card_back').setScale(0.7);
+    const deckX = 450;
+    const deckY = 400;
+    const discardX = 750;
+    const discardY = 400;
+
+    let deckSprite = this.add.image(deckX, deckY, 'card_back').setScale(0.7).setInteractive();
+    discardPileSprite = this.add.image(discardX, discardY, 'card_back').setScale(0.7);
+
+    // Deste üzerindeki kart sayısını göster
+    deckCountText = this.add.text(deckX, deckY - 70, '', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
 
     // Desteye tıklama olayını ekle
     deckSprite.on('pointerdown', () => {
@@ -30,26 +57,31 @@ function create() {
         displayHand(this);
     });
 
-    // Sunucudan gelen mesajları dinleme
-    socket.on('playerJoined', (data) => {
-        console.log(`Yeni oyuncu katıldı. Toplam oyuncu: ${data.totalPlayers}`);
-        // Atma destesini güncelle
-        if (data.discardPile) {
-            discardPileSprite.setFrame(data.discardPile.rank + data.discardPile.suit);
-        }
+    // Desteden çekilen kart sayısını güncelleme
+    socket.on('deckCount', (count) => {
+        deckCountText.setText(`Deste: ${count}`);
     });
     
     // Atma destesini güncelleme
     socket.on('updateDiscardPile', (cardData) => {
         discardPileSprite.setFrame(cardData.rank + cardData.suit);
     });
+
+    // Oyuncu katıldığında
+    socket.on('playerJoined', (data) => {
+        console.log(`Yeni oyuncu katıldı. Toplam oyuncu: ${data.totalPlayers}`);
+    });
 }
 
+function update() {
+    // Oyun döngüsü
+}
+
+// Kartları ekranda göstermek için fonksiyon
 function displayHand(scene) {
     let handX = 600 - (playerHand.length * 40) / 2;
     let handY = 700;
     
-    // Elimizdeki kartları temizle
     scene.children.each((child) => {
         if (child.getData && child.getData('isCard')) {
             child.destroy();
@@ -70,5 +102,3 @@ function displayHand(scene) {
         });
     }
 }
-
-// ... (update fonksiyonu aynı kalacak) ...

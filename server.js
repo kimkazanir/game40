@@ -2,6 +2,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -9,11 +10,14 @@ const server = http.createServer(app);
 // Socket.io sunucusunu HTTP sunucusuna bağlıyoruz
 const io = socketIo(server, {
   cors: {
-    origin: '*', // Tüm bağlantılara izin veriyoruz
+    origin: '*',
   }
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Express'e statik dosyaları mevcut dizinden sunmasını söylüyoruz
+app.use(express.static(path.join(__dirname, '')));
 
 // OYUN VERİLERİ
 let deck = [];
@@ -39,20 +43,19 @@ function createDeck() {
     // Fisher-Yates shuffle algoritması
     for (let i = newDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+        [newDeck[i], newDeck[j]] = [newDeck[i], newDeck[i]];
     }
     return newDeck;
 }
 
 // Oyun başladığında desteyi oluşturuyoruz
 deck = createDeck();
-discardPile.push(deck.pop()); // Bir kartı atma destesine koyuyoruz
+discardPile.push(deck.pop());
 
 // Socket.io bağlantısı kurulduğunda
 io.on('connection', (socket) => {
     console.log(`Yeni bir oyuncu bağlandı: ${socket.id}`);
 
-    // Oyuncu sayısının maksimuma ulaşmadığını kontrol et
     if (Object.keys(players).length < MAX_PLAYERS) {
         players[socket.id] = {
             id: socket.id,
@@ -61,18 +64,15 @@ io.on('connection', (socket) => {
             isTurn: false,
         };
 
-        // Bağlanan oyuncuya kartları dağıt
         for (let i = 0; i < STARTING_CARDS; i++) {
             players[socket.id].hand.push(deck.pop());
         }
 
-        // Oyuncu bağlandığında tüm oyunculara haber ver
         io.emit('playerJoined', {
             id: socket.id,
             totalPlayers: Object.keys(players).length,
         });
 
-        // Bağlanan oyuncuya elini gönder
         socket.emit('myHand', players[socket.id].hand);
 
     } else {
@@ -80,8 +80,6 @@ io.on('connection', (socket) => {
         socket.disconnect();
     }
 
-
-    // Bağlantı kesildiğinde
     socket.on('disconnect', () => {
         console.log(`Oyuncu ayrıldı: ${socket.id}`);
         delete players[socket.id];
@@ -92,7 +90,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Sunucuyu başlatıyoruz
 server.listen(PORT, () => {
     console.log(`Sunucu ${PORT} portunda çalışıyor.`);
 });

@@ -22,7 +22,7 @@ let isMyTurn = false;
 
 function preload() {
     this.load.image('card_back', 'https://i.imgur.com/K0rT0Jk.png');
-    this.load.atlas('cards', 'https://i.imgur.com/39Uq801.png', 'https://i.imgur.com/Qj04b7y.json');
+    this.load.image('cards', 'https://i.imgur.com/39Uq801.png');
 }
 
 function create() {
@@ -63,7 +63,7 @@ function create() {
     
     socket.on('updateDiscardPile', (cardData) => {
         if (cardData) {
-            discardPileSprite.setFrame(cardData.rank + cardData.suit);
+            displayDiscardPile(this, cardData);
         }
     });
 
@@ -90,6 +90,26 @@ function updateTurnText() {
     turnText.setText(isMyTurn ? 'Sıra Sende!' : 'Rakibinin sırası...');
 }
 
+function getCardFrame(cardData) {
+    const cardNames = [
+        'Aclubs', 'Ahearts', 'Adiamonds', 'Aspades',
+        '2clubs', '2hearts', '2diamonds', '2spades',
+        '3clubs', '3hearts', '3diamonds', '3spades',
+        '4clubs', '4hearts', '4diamonds', '4spades',
+        '5clubs', '5hearts', '5diamonds', '5spades',
+        '6clubs', '6hearts', '6diamonds', '6spades',
+        '7clubs', '7hearts', '7diamonds', '7spades',
+        '8clubs', '8hearts', '8diamonds', '8spades',
+        '9clubs', '9hearts', '9diamonds', '9spades',
+        '10clubs', '10hearts', '10diamonds', '10spades',
+        'Jclubs', 'Jhearts', 'Jdiamonds', 'Jspades',
+        'Qclubs', 'Qhearts', 'Qdiamonds', 'Qspades',
+        'Kclubs', 'Khearts', 'Kdiamonds', 'Kspades',
+        'Joker1', 'Joker2'
+    ];
+    return cardNames.indexOf(cardData.rank + cardData.suit);
+}
+
 function displayHand(scene) {
     let handX = 600 - (playerHand.length * 40) / 2;
     let handY = 700;
@@ -102,8 +122,7 @@ function displayHand(scene) {
 
     for (let i = 0; i < playerHand.length; i++) {
         const cardData = playerHand[i];
-        const cardFrame = cardData.rank + cardData.suit;
-        let card = scene.add.image(handX + (i * 80), handY, 'cards', cardFrame).setScale(0.7);
+        let card = scene.add.sprite(handX + (i * 80), handY, 'cards', getCardFrame(cardData)).setScale(0.7);
         card.setInteractive();
         card.setData('isCard', true);
         card.setData('cardData', cardData);
@@ -116,4 +135,9 @@ function displayHand(scene) {
             }
         });
     }
+}
+
+function displayDiscardPile(scene, cardData) {
+    discardPileSprite.setTexture('cards');
+    discardPileSprite.setFrame(getCardFrame(cardData));
 }

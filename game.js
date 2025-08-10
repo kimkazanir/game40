@@ -35,6 +35,25 @@ function create() {
 
     // Burada oyunun başlangıç ayarları ve arayüzü oluşturulacak
     this.add.text(400, 300, 'Oyun Yükleniyor...', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+    
+    // ...
+function create() {
+    // Sunucuya başarıyla bağlandığımızda... (bu kısım zaten vardı)
+    socket.on('connect', () => {
+        console.log('Sunucuya başarıyla bağlandık!', socket.id);
+    });
+
+    // Oyun tahtası için basit bir arka plan rengi ekleyelim.
+    // İlk iki parametre x ve y koordinatları, sonraki ikisi genişlik ve yükseklik, son parametre ise renktir.
+    this.cameras.main.setBackgroundColor('#283618'); // Koyu yeşil bir masa rengi
+
+    this.add.text(400, 300, 'Rummy Oyunu', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+
+    // Burada oyuncunun kartlarının duracağı alanı, desteyi ve diğer arayüz elemanlarını ekleyeceğiz.
+}
+
+// ...
+
 }
 
 function update() {

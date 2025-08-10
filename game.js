@@ -43,6 +43,8 @@ function create() {
     deckSprite.on('pointerdown', () => {
         if (isMyTurn) {
             socket.emit('drawCard');
+        } else {
+            console.log("Sıra sizde değil!");
         }
     });
 
@@ -65,7 +67,9 @@ function create() {
         }
     });
 
+    // Oyuncu katıldığında
     socket.on('playerJoined', (data) => {
+        console.log(`Yeni oyuncu katıldı. Toplam oyuncu: ${data.totalPlayers}`);
         data.players.forEach(player => {
             if (player.id === socket.id) {
                 isMyTurn = player.isTurn;
@@ -74,6 +78,7 @@ function create() {
         updateTurnText();
     });
 
+    // Tur değiştiğinde
     socket.on('turnChanged', (playerId) => {
         isMyTurn = (playerId === socket.id);
         updateTurnText();
@@ -109,6 +114,8 @@ function displayHand(scene) {
         card.on('pointerdown', () => {
             if (isMyTurn) {
                 socket.emit('discardCard', card.getData('cardData'));
+            } else {
+                console.log("Sıra sizde değil!");
             }
         });
     }

@@ -43,7 +43,7 @@ function createDeck() {
     // Fisher-Yates shuffle algoritması
     for (let i = newDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]]; // Hata burada düzeltildi!
+        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
     }
     return newDeck;
 }
@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
             id: socket.id,
             hand: [],
             score: 0,
-            isTurn: false,
+            isTurn: Object.keys(players).length === 0,
         };
 
         for (let i = 0; i < STARTING_CARDS; i++) {
@@ -71,6 +71,8 @@ io.on('connection', (socket) => {
         io.emit('playerJoined', {
             id: socket.id,
             totalPlayers: Object.keys(players).length,
+            players: Object.values(players),
+            discardPile: discardPile[discardPile.length - 1],
         });
 
         socket.emit('myHand', players[socket.id].hand);
@@ -79,6 +81,40 @@ io.on('connection', (socket) => {
         socket.emit('gameFull', 'Oyun dolu, daha sonra tekrar deneyin.');
         socket.disconnect();
     }
+    
+    socket.on('drawCard', () => {
+        if (players[socket.id].isTurn) {
+            if (deck.length > 0) {
+                const card = deck.pop();
+                players[socket.id].hand.push(card);
+                socket.emit('myHand', players[socket.id].hand);
+                io.emit('deckCount', deck.length);
+            }
+        }
+    });
+
+    socket.on('discardCard', (cardData) => {
+        if (players[socket.id].isTurn) {
+            const playerHand = players[socket.id].hand;
+            const cardIndex = playerHand.findIndex(card => card.rank === cardData.rank && card.suit === cardData.suit);
+            
+            if (cardIndex !== -1) {
+                const discardedCard = playerHand.splice(cardIndex, 1)[0];
+                discardPile.push(discardedCard);
+                socket.emit('myHand', players[socket.id].hand);
+                io.emit('updateDiscardPile', discardedCard);
+                
+                const playerIds = Object.keys(players);
+                const currentPlayerIndex = playerIds.indexOf(socket.id);
+                const nextPlayerIndex = (currentPlayerIndex + 1) % playerIds.length;
+                
+                players[socket.id].isTurn = false;
+                players[playerIds[nextPlayerIndex]].isTurn = true;
+
+                io.emit('turnChanged', players[playerIds[nextPlayerIndex]].id);
+            }
+        }
+    });
 
     socket.on('disconnect', () => {
         console.log(`Oyuncu ayrıldı: ${socket.id}`);

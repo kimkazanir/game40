@@ -21,8 +21,8 @@ let turnText;
 let isMyTurn = false;
 
 function preload() {
-    this.load.image('card_back', 'https://i.imgur.com/K0rT0Jk.png');
-    this.load.image('cards', 'https://i.imgur.com/39Uq801.png');
+    this.load.image('card_back', 'https://gameassets.netlify.app/card_back.png');
+    this.load.image('cards', 'https://gameassets.netlify.app/cards.png');
 }
 
 function create() {

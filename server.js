@@ -1,4 +1,56 @@
-// ... (Önceki kodlar aynı kalacak) ...
+// Gerekli kütüphaneleri dahil ediyoruz
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const path = require('path');
+
+const app = express();
+const server = http.createServer(app);
+
+// Socket.io sunucusunu HTTP sunucusuna bağlıyoruz
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+
+// Express'e statik dosyaları mevcut dizinden sunmasını söylüyoruz
+app.use(express.static(path.join(__dirname, '')));
+
+// OYUN VERİLERİ
+let deck = [];
+let players = {};
+let discardPile = [];
+const MAX_PLAYERS = 6;
+const STARTING_CARDS = 14;
+
+// 3 deste kartı oluşturacak ve karıştıracak fonksiyon
+function createDeck() {
+    const suits = ['C', 'D', 'H', 'S'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+    let newDeck = [];
+
+    for (let i = 0; i < 3; i++) {
+        for (const suit of suits) {
+            for (const rank of ranks) {
+                newDeck.push({ rank, suit });
+            }
+        }
+    }
+
+    // Fisher-Yates shuffle algoritması
+    for (let i = newDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]]; // Hata burada düzeltildi!
+    }
+    return newDeck;
+}
+
+// Oyun başladığında desteyi oluşturuyoruz
+deck = createDeck();
+discardPile.push(deck.pop());
 
 // Socket.io bağlantısı kurulduğunda
 io.on('connection', (socket) => {
@@ -9,7 +61,7 @@ io.on('connection', (socket) => {
             id: socket.id,
             hand: [],
             score: 0,
-            isTurn: Object.keys(players).length === 0, // İlk oyuncu turu başlar
+            isTurn: false,
         };
 
         for (let i = 0; i < STARTING_CARDS; i++) {
@@ -19,8 +71,6 @@ io.on('connection', (socket) => {
         io.emit('playerJoined', {
             id: socket.id,
             totalPlayers: Object.keys(players).length,
-            players: Object.values(players),
-            discardPile: discardPile[discardPile.length - 1],
         });
 
         socket.emit('myHand', players[socket.id].hand);
@@ -29,34 +79,7 @@ io.on('connection', (socket) => {
         socket.emit('gameFull', 'Oyun dolu, daha sonra tekrar deneyin.');
         socket.disconnect();
     }
-    
-    // Oyuncu desteden kart çektiğinde
-    socket.on('drawCard', () => {
-        if (deck.length > 0) {
-            const card = deck.pop();
-            players[socket.id].hand.push(card);
-            socket.emit('myHand', players[socket.id].hand); // Elini güncelle
-            io.emit('deckCount', deck.length); // Deste sayısını tüm oyunculara gönder
-        }
-    });
 
-    // Oyuncu elindeki bir kartı attığında
-    socket.on('discardCard', (cardData) => {
-        const playerHand = players[socket.id].hand;
-        const cardIndex = playerHand.findIndex(card => card.rank === cardData.rank && card.suit === cardData.suit);
-        
-        if (cardIndex !== -1) {
-            const discardedCard = playerHand.splice(cardIndex, 1)[0];
-            discardPile.push(discardedCard);
-            socket.emit('myHand', players[socket.id].hand); // Elini güncelle
-            io.emit('updateDiscardPile', discardedCard); // Atma destesini güncelle
-            
-            // Sıradaki oyuncuya turu devret
-            // ... (Tur yönetimi kodları buraya gelecek) ...
-        }
-    });
-
-    // Bağlantı kesildiğinde
     socket.on('disconnect', () => {
         console.log(`Oyuncu ayrıldı: ${socket.id}`);
         delete players[socket.id];
@@ -67,4 +90,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// ... (Kalan kodlar aynı kalacak) ...
+server.listen(PORT, () => {
+    console.log(`Sunucu ${PORT} portunda çalışıyor.`);
+});

@@ -11,13 +11,14 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// Sunucuya bağlanmak için URL (tek servis olduğu için ana URL)
 const socket = io('https://game40.onrender.com');
 
-// Oyun verileri
 let playerHand = [];
 let deckCountText;
 let discardPileSprite;
+let deckSprite;
+let turnText;
+let isMyTurn = false;
 
 function preload() {
     this.load.image('card_back', 'https://raw.githubusercontent.com/yolafro/phaser-deck/main/assets/images/card_back.png');
@@ -27,49 +28,55 @@ function preload() {
 function create() {
     this.cameras.main.setBackgroundColor('#283618');
     this.add.text(600, 50, 'Online Rummy', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+    turnText = this.add.text(600, 100, '', { fontSize: '24px', fill: '#ffc' }).setOrigin(0.5);
 
-    // Deste ve atma destesi görsellerini ekle
     const deckX = 450;
     const deckY = 400;
     const discardX = 750;
     const discardY = 400;
 
-    let deckSprite = this.add.image(deckX, deckY, 'card_back').setScale(0.7).setInteractive();
+    deckSprite = this.add.image(deckX, deckY, 'card_back').setScale(0.7).setInteractive();
     discardPileSprite = this.add.image(discardX, discardY, 'card_back').setScale(0.7);
 
-    // Deste üzerindeki kart sayısını göster
     deckCountText = this.add.text(deckX, deckY - 70, '', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
 
-    // Desteye tıklama olayını ekle
     deckSprite.on('pointerdown', () => {
-        socket.emit('drawCard');
+        if (isMyTurn) {
+            socket.emit('drawCard');
+        }
     });
 
-    // Sunucuya başarıyla bağlandığımızda
     socket.on('connect', () => {
         console.log('Sunucuya başarıyla bağlandık!', socket.id);
     });
 
-    // Sunucudan gelen kendi kartlarımızı alıyoruz
     socket.on('myHand', (hand) => {
         playerHand = hand;
-        console.log('Elindeki kartlar:', playerHand);
         displayHand(this);
     });
 
-    // Desteden çekilen kart sayısını güncelleme
     socket.on('deckCount', (count) => {
         deckCountText.setText(`Deste: ${count}`);
     });
     
-    // Atma destesini güncelleme
     socket.on('updateDiscardPile', (cardData) => {
-        discardPileSprite.setFrame(cardData.rank + cardData.suit);
+        if (cardData) {
+            discardPileSprite.setFrame(cardData.rank + cardData.suit);
+        }
     });
 
-    // Oyuncu katıldığında
     socket.on('playerJoined', (data) => {
-        console.log(`Yeni oyuncu katıldı. Toplam oyuncu: ${data.totalPlayers}`);
+        data.players.forEach(player => {
+            if (player.id === socket.id) {
+                isMyTurn = player.isTurn;
+            }
+        });
+        updateTurnText();
+    });
+
+    socket.on('turnChanged', (playerId) => {
+        isMyTurn = (playerId === socket.id);
+        updateTurnText();
     });
 }
 
@@ -77,7 +84,10 @@ function update() {
     // Oyun döngüsü
 }
 
-// Kartları ekranda göstermek için fonksiyon
+function updateTurnText() {
+    turnText.setText(isMyTurn ? 'Sıra Sende!' : 'Rakibinin sırası...');
+}
+
 function displayHand(scene) {
     let handX = 600 - (playerHand.length * 40) / 2;
     let handY = 700;
@@ -96,9 +106,10 @@ function displayHand(scene) {
         card.setData('isCard', true);
         card.setData('cardData', cardData);
         
-        // Kartı atmak için tıklama olayı
         card.on('pointerdown', () => {
-            socket.emit('discardCard', card.getData('cardData'));
+            if (isMyTurn) {
+                socket.emit('discardCard', card.getData('cardData'));
+            }
         });
     }
 }

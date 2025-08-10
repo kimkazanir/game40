@@ -21,9 +21,8 @@ let turnText;
 let isMyTurn = false;
 
 function preload() {
-    console.log("Görseller yükleniyor...");
-    this.load.image('card_back', 'https://www.dropbox.com/scl/fi/v623d24g81s34n6h66s19/card_back.png?rlkey=4dfr48u411c97a82u788s3q9e&raw=1');
-    this.load.atlas('cards', 'https://www.dropbox.com/scl/fi/f0c3l9g9v2m027p5q0b4d/cards.png?rlkey=8s43y84qg1e6o62k1d97f2m61&raw=1', 'https://www.dropbox.com/scl/fi/p5qj7q2p7k1h016d94h9o/cards.json?rlkey=t0w3w3t3f2d2r45t2t8q2z2s4&raw=1');
+    this.load.image('card_back', 'https://i.imgur.com/K0rT0Jk.png');
+    this.load.atlas('cards', 'https://i.imgur.com/39Uq801.png', 'https://i.imgur.com/Qj04b7y.json');
 }
 
 function create() {
@@ -69,7 +68,6 @@ function create() {
     });
 
     socket.on('playerJoined', (data) => {
-        console.log(`Yeni oyuncu katıldı. Toplam oyuncu: ${data.totalPlayers}`);
         data.players.forEach(player => {
             if (player.id === socket.id) {
                 isMyTurn = player.isTurn;
